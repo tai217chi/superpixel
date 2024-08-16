@@ -1,0 +1,15 @@
+version: '2'
+services:
+  superpixel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: superpixel:latest
+    volumes:
+      - ../superpixel:/superpixel
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
