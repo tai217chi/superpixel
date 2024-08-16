@@ -4,6 +4,7 @@ import cv2
 import numpy as np 
 from numpy.typing import NDArray
 from copy import deepcopy
+from tqdm import tqdm
 from .util import viz_slic_superpixel
 
 class SLIC:
@@ -30,36 +31,90 @@ class SLIC:
         
         # superpixelを配置する間隔を決める
         num_pixels                = img.shape[0]*img.shape[1]
+        self._img_height          = img.shape[0]
+        self._img_width           = img.shape[1]
         self._superpixel_interbal = int(np.sqrt(num_pixels/self._num_superpixel))
 
         # RGB -> LAB
         img_lab = cv2.cvtColor(deepcopy(img), cv2.COLOR_BGR2Lab)
 
         # 各ピクセルのパラメータ[l, a, b, x, y]を格納したマトリックスを作成する。
-        self._pixel_parameter_mat = self._create_pixel_params(img_lab, img_lab.shape[0], img_lab.shape[1])
+        self._pixel_parameter_mat = self._create_pixel_params(img_lab, self._img_height, self._img_width)
 
         # 各ピクセルのクラスタのインデックスと各ピクセルの最寄りのsuperpixelとの距離関数の値を初期化
-        self._pixel_labels     = np.array([-1 for _ in range(img.shape[0]*img.shape[1])]).reshape(img.shape[0], img.shape[1])
-        self._pixel_dist_value = np.array([np.inf for _ in range(img.shape[0]*img.shape[1])]).reshape(img.shape[0], img.shape[1])
+        self._pixel_labels     = np.array([-1 for _ in range(num_pixels)]).reshape(self._img_height, self._img_width)
+        self._pixel_dist_value = np.array([np.inf for _ in range(num_pixels)]).reshape(self._img_height, self._img_width)
 
         # superpixelのパラメータ([l, a, b, x, y]を初期化する)
-        self._superpixel_param_list = self._init_superpixel_param(img_lab.shape[0], img_lab.shape[1])
+        self._superpixel_param_list = self._init_superpixel_param(self._img_height, self._img_width)
 
         self._transform_superpixel_center()
 
         #* デバッグ
         print(f"superpixelの数 (クラスタ数): {self._num_superpixel}")
         print(f"superpixelに統合したときのサイズ: ({self._superpixel_param_list.shape})")
-        viz_slic_superpixel(self._superpixel_param_list, img)
+        viz_slic_superpixel(self._superpixel_param_list, img, save_file_name = "initial_superpixel")
 
-    def fit(self):
+    def fit(self, img: NDArray):
         # ０．あるsuperpixelから特定の範囲に存在するピクセルのみと距離Dを計算
         # １．各ピクセルのクラスタのインデックスを距離が最も小さいsuperpixelのインデックスに更新する
         # ２．superpixelの重心を計算し直す
         # ３．決められた回数だけ0~2の処理を繰り返す。
 
-        for i in range(self._num_iter):
-            pass
+        for i in tqdm(range(self._num_iter)):
+            self._update_superpixel()
+
+        viz_slic_superpixel(self._superpixel_param_list, img, "result")
+
+
+    def _update_superpixel(self):
+        
+        ## 各ピクセルをsuperpixelに割り当てる処理 ##
+        for superpixel_id, superpixel in enumerate(self._superpixel_param_list):
+
+            super_x, suepr_y = int(superpixel[3]), int(superpixel[4])
+
+            x_min = max(0, super_x - self._superpixel_interbal)
+            y_min = max(0, suepr_y - self._superpixel_interbal)
+            x_max = min(self._img_width - 1, super_x + self._superpixel_interbal)
+            y_max = min(self._img_width - 1, self._img_height)
+
+            for y in range(y_min, y_max+1):
+                for x in range(x_min, x_max+1):
+                    pixel = self._pixel_parameter_mat[y, x]
+                    d     = self._calc_distance(superpixel, pixel)
+
+                    if d < self._pixel_dist_value[y, x]:
+                        self._pixel_dist_value[y, x] = d
+                        self._pixel_labels[y ,x]     = superpixel_id
+
+        ## sueprpixelの重心位置を再計算 -> 同一のsuperpixelに属するpixelのパラメータの平均によって求める ##
+        for i in range(self._num_superpixel):
+            idxs  = np.where(self._pixel_labels == i) # idxs: ([y1, y2, ...], [x1, x2, ...]), あるsuperpixelに属するすべてのピクセルの座標を取得する
+            count = len(idxs[0])
+            avg_y = np.round(np.sum(idxs[0]) / count)
+            avg_x = np.round(np.sum(idxs[1]) / count)
+            avg_l = np.round(np.sum(self._pixel_parameter_mat[idxs][:, 0]) / count)
+            avg_a = np.round(np.sum(self._pixel_parameter_mat[idxs][:, 1]) / count)
+            avg_b = np.round(np.sum(self._pixel_parameter_mat[idxs][:, 2]) / count)
+
+            self._superpixel_param_list[i] = [avg_l, avg_a, avg_b, avg_x, avg_y]
+
+
+    def _calc_distance(self, superpixel: NDArray, pixel: NDArray):
+
+        """ピクセルとsuperpixelの距離を計算するための関数
+
+        Args:
+            superpoint (NDArray): 特定のsuperpixelのパラメータ, [l, a, d, x, y]
+            pixel (_type_): 特定のpixelのパラメータ, [l, a, d, x, y]
+        """
+
+        dc = np.sqrt((superpixel[0] - pixel[0])**2 + (superpixel[1] - pixel[1])**2 + (superpixel[2] - pixel[2])*2)
+        ds = np.sqrt((superpixel[3] - pixel[3])**2 + (superpixel[4] - pixel[4])**2)
+        d  = np.sqrt(dc**2 + (ds**2/self._superpixel_interbal)*self._max_color_dist**2)
+
+        return d
 
     def _init_superpixel_param(
             self, 

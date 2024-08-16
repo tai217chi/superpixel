@@ -29,4 +29,5 @@ RUN pip3 install --no-cache-dir seaborn
 RUN pip3 install --no-cache-dir numba
 RUN pip3 install --no-cache-dir numpy
 RUN pip3 install --no-cache-dir opencv-python
+RUN pip3 install --no-cache-dir tqdm
 WORKDIR /superpixel

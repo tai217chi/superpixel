@@ -6,7 +6,11 @@ from numpy.typing import NDArray
 
 import matplotlib.pyplot as plt
 
-def viz_slic_superpixel(superpixel_param_list: NDArray, img: NDArray) -> NDArray:
+def viz_slic_superpixel(
+        superpixel_param_list: NDArray, 
+        img: NDArray, 
+        save_file_name: str
+) -> None:
 
     """
     オリジナルの画像に、superpixelの重心を描画する
@@ -18,4 +22,4 @@ def viz_slic_superpixel(superpixel_param_list: NDArray, img: NDArray) -> NDArray
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     fig = plt.figure()
     plt.imshow(img)
-    plt.savefig("./init_superpixel_center.png")
+    plt.savefig(f"./{save_file_name}.png")

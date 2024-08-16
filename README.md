@@ -1,6 +1,6 @@
-# クラスタリングによる画像の領域分割の理論と実装の勉強のために実装していくリポジトリ
+# クラスタリングによる画像の領域分割の理論と実装の勉強のためのリポジトリ
 - keyword
-    - superpixel, 
+    - superpixel, image segmentation, unsupervised image segmentation
 
 ## 参考
 ### SLIC 
