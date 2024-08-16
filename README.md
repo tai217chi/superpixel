@@ -3,10 +3,10 @@
     - superpixel, image segmentation, unsupervised image segmentation
 
 ## 参考
-### SLIC 
+### SLIC (DONE!)
  - [論文](https://core.ac.uk/download/pdf/147983593.pdf)
  - [実装](https://github.com/textcunma/SLIC/tree/main?tab=readme-ov-file)
 
-### Efficient Graph-Based Image Segmentation (Selective Search)
+### Efficient Graph-Based Image Segmentation (Selective Search) (TODO)
  - [論文](https://cs.brown.edu/people/pfelzens/papers/seg-ijcv.pdf)
  - [実装](https://github.com/salaee/pegbis?tab=readme-ov-file)
