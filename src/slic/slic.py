@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Tuple
 
 import cv2 
 import numpy as np 
@@ -48,14 +49,14 @@ class SLIC:
         # superpixelのパラメータ([l, a, b, x, y]を初期化する)
         self._superpixel_param_list = self._init_superpixel_param(self._img_height, self._img_width)
 
-        self._transform_superpixel_center()
+        # self._transform_superpixel_center()
 
         #* デバッグ
         print(f"superpixelの数 (クラスタ数): {self._num_superpixel}")
         print(f"superpixelに統合したときのサイズ: ({self._superpixel_param_list.shape})")
         viz_slic_superpixel(self._superpixel_param_list, img, save_file_name = "initial_superpixel")
 
-    def fit(self, img: NDArray):
+    def fit(self, img: NDArray) -> Tuple[NDArray, NDArray]:
         # ０．あるsuperpixelから特定の範囲に存在するピクセルのみと距離Dを計算
         # １．各ピクセルのクラスタのインデックスを距離が最も小さいsuperpixelのインデックスに更新する
         # ２．superpixelの重心を計算し直す
@@ -66,12 +67,13 @@ class SLIC:
 
         viz_slic_superpixel(self._superpixel_param_list, img, "result")
 
+        return self._pixel_labels, self._superpixel_param_list
+
 
     def _update_superpixel(self):
         
         ## 各ピクセルをsuperpixelに割り当てる処理 ##
         for superpixel_id, superpixel in enumerate(self._superpixel_param_list):
-
             super_x, suepr_y = int(superpixel[3]), int(superpixel[4])
 
             x_min = max(0, super_x - self._superpixel_interbal)
@@ -92,6 +94,8 @@ class SLIC:
         for i in range(self._num_superpixel):
             idxs  = np.where(self._pixel_labels == i) # idxs: ([y1, y2, ...], [x1, x2, ...]), あるsuperpixelに属するすべてのピクセルの座標を取得する
             count = len(idxs[0])
+            if count == 0:
+                continue
             avg_y = np.round(np.sum(idxs[0]) / count)
             avg_x = np.round(np.sum(idxs[1]) / count)
             avg_l = np.round(np.sum(self._pixel_parameter_mat[idxs][:, 0]) / count)
@@ -99,7 +103,6 @@ class SLIC:
             avg_b = np.round(np.sum(self._pixel_parameter_mat[idxs][:, 2]) / count)
 
             self._superpixel_param_list[i] = [avg_l, avg_a, avg_b, avg_x, avg_y]
-
 
     def _calc_distance(self, superpixel: NDArray, pixel: NDArray):
 
@@ -110,7 +113,7 @@ class SLIC:
             pixel (_type_): 特定のpixelのパラメータ, [l, a, d, x, y]
         """
 
-        dc = np.sqrt((superpixel[0] - pixel[0])**2 + (superpixel[1] - pixel[1])**2 + (superpixel[2] - pixel[2])*2)
+        dc = np.sqrt((superpixel[0] - pixel[0])**2 + (superpixel[1] - pixel[1])**2 + (superpixel[2] - pixel[2])**2)
         ds = np.sqrt((superpixel[3] - pixel[3])**2 + (superpixel[4] - pixel[4])**2)
         d  = np.sqrt(dc**2 + (ds**2/self._superpixel_interbal)*self._max_color_dist**2)
 
