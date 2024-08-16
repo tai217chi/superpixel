@@ -17,4 +17,4 @@
  クラスタが未割り当てのピクセルが存在する場合、最も距離が近いsuperpixelのインデックスを割り当てる。
 
 # 独自で実装したSLICの出力結果とscikit-imageに実装されているSLICの出力結果の比較
-![独自実装とscikit-imageの実装の出力結果の比較](./media/compair.png)
+![独自実装とscikit-imageの実装の出力結果の比較](../../media/media/compair.png)
